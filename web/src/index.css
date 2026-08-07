@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #0A0A0A;
+  --color-paper: #FAFAFA;
+  --color-accent: #FF4D00;
+  --color-graphite: #6B6B6B;
+  --color-hairline: #E5E5E5;
+
+  --font-display: "Archivo", "Arial Narrow", sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+}

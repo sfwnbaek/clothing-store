@@ -1,0 +1,20 @@
+# Backend (Spring Boot)
+api/target/
+api/.mvn/wrapper/maven-wrapper.jar
+api/HELP.md
+
+# Backend secrets — never commit real config
+api/src/main/resources/application.properties
+
+# Frontend (React/Vite)
+web/node_modules/
+web/dist/
+web/.env
+
+# Uploaded images (local dev storage — shouldn't go in git)
+api/uploads/
+
+# OS/editor junk
+.DS_Store
+Thumbs.db
+.vscode/
