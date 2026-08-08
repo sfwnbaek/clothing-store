@@ -18,6 +18,8 @@ public class OrderResponse {
     private BigDecimal total;
     private LocalDateTime createdAt;
     private List<OrderItemResponse> items;
+    private BigDecimal discountAmount;
+    private String couponCode;
 
     public static OrderResponse from(Order order) {
         OrderResponse response = new OrderResponse();
@@ -31,9 +33,11 @@ public class OrderResponse {
         response.items = order.getItems().stream()
                 .map(OrderItemResponse::from)
                 .collect(Collectors.toList());
+        response.discountAmount = order.getDiscountAmount();
+        response.couponCode = order.getCouponCode();
         return response;
     }
-
+    
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
 
@@ -57,4 +61,10 @@ public class OrderResponse {
 
     public List<OrderItemResponse> getItems() { return items; }
     public void setItems(List<OrderItemResponse> items) { this.items = items; }
+
+    public BigDecimal getDiscountAmount() { return discountAmount; }
+    public void setDiscountAmount(BigDecimal discountAmount) { this.discountAmount = discountAmount; }
+
+    public String getCouponCode() { return couponCode; }
+    public void setCouponCode(String couponCode) { this.couponCode = couponCode; }
 }

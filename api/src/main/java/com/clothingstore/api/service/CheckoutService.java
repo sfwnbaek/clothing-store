@@ -21,6 +21,7 @@ public class CheckoutService {
     @Autowired private ProductVariantRepository variantRepository;
     @Autowired private OrderRepository orderRepository;
     @Autowired private PaymentRepository paymentRepository;
+    @Autowired private CouponService couponService;
 
     @Transactional
     public CheckoutResult checkout(User user, CheckoutRequest request) {
@@ -63,9 +64,18 @@ public class CheckoutService {
             subtotal = subtotal.add(unitPrice.multiply(BigDecimal.valueOf(cartItem.getQuantity())));
         }
 
+        // Apply coupon, if provided
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        Coupon appliedCoupon = null;
+        if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
+            appliedCoupon = couponService.validateCoupon(request.getCouponCode());
+            discountAmount = couponService.calculateDiscount(appliedCoupon, subtotal);
+        }
+
+        BigDecimal discountedSubtotal = subtotal.subtract(discountAmount);
         BigDecimal shippingCost = BigDecimal.valueOf(9.99);
-        BigDecimal tax = subtotal.multiply(BigDecimal.valueOf(0.08));
-        BigDecimal total = subtotal.add(shippingCost).add(tax);
+        BigDecimal tax = discountedSubtotal.multiply(BigDecimal.valueOf(0.08));
+        BigDecimal total = discountedSubtotal.add(shippingCost).add(tax);
 
         Order order = new Order();
         order.setUser(user);
@@ -80,6 +90,10 @@ public class CheckoutService {
         order.setShippingCost(shippingCost);
         order.setTax(tax);
         order.setTotal(total);
+        order.setDiscountAmount(discountAmount);
+        if (appliedCoupon != null) {
+            order.setCouponCode(appliedCoupon.getCode());
+        }
 
         for (OrderItem item : orderItems) {
             item.setOrder(order);
@@ -88,7 +102,10 @@ public class CheckoutService {
 
         Order savedOrder = orderRepository.save(order);
 
-        // Create a Stripe PaymentIntent for this order's total
+        if (appliedCoupon != null) {
+            couponService.recordUsage(appliedCoupon);
+        }
+
         String clientSecret;
         try {
             long amountInCents = total.multiply(BigDecimal.valueOf(100)).longValue();
@@ -120,7 +137,6 @@ public class CheckoutService {
             throw new IllegalStateException("Payment setup failed: " + e.getMessage());
         }
 
-        // Clear the cart
         cart.getItems().clear();
         cartRepository.save(cart);
 

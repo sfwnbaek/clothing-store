@@ -21,6 +21,8 @@ public class CheckoutRequest {
     @NotBlank
     private String country;
 
+    private String couponCode;
+
     // Getters and setters
     public String getAddressLine1() { return addressLine1; }
     public void setAddressLine1(String v) { this.addressLine1 = v; }
@@ -39,4 +41,7 @@ public class CheckoutRequest {
 
     public String getCountry() { return country; }
     public void setCountry(String country) { this.country = country; }
+
+    public String getCouponCode() { return couponCode; }
+    public void setCouponCode(String couponCode) { this.couponCode = couponCode; }
 }
