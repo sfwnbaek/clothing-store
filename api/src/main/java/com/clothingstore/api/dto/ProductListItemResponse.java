@@ -14,6 +14,7 @@ public class ProductListItemResponse {
     private BigDecimal basePrice;
     private String brand;
     private List<String> imageUrls;
+    private UUID categoryId;
 
     public static ProductListItemResponse from(Product product, List<String> imageUrls) {
         ProductListItemResponse response = new ProductListItemResponse();
@@ -23,6 +24,9 @@ public class ProductListItemResponse {
         response.basePrice = product.getBasePrice();
         response.brand = product.getBrand();
         response.imageUrls = imageUrls;
+        if (product.getCategory() != null) {
+            response.categoryId = product.getCategory().getId();
+        }
         return response;
     }
 
@@ -43,4 +47,7 @@ public class ProductListItemResponse {
 
     public List<String> getImageUrls() { return imageUrls; }
     public void setImageUrls(List<String> imageUrls) { this.imageUrls = imageUrls; }
+
+    public UUID getCategoryId() { return categoryId; }
+    public void setCategoryId(UUID categoryId) { this.categoryId = categoryId; }
 }

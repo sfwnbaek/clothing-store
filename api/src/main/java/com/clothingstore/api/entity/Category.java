@@ -21,6 +21,9 @@ public class Category {
     @JoinColumn(name = "parent_id")
     private Category parent;
 
+    @Column(name = "size_type", nullable = false)
+    private String sizeType = "APPAREL";
+
     // Getters and setters
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
@@ -33,4 +36,7 @@ public class Category {
 
     public Category getParent() { return parent; }
     public void setParent(Category parent) { this.parent = parent; }
+    
+    public String getSizeType() { return sizeType; }
+    public void setSizeType(String sizeType) { this.sizeType = sizeType; }
 }

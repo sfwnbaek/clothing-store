@@ -14,6 +14,8 @@ public class CategoryRequest {
 
     private UUID parentId;
 
+    private String sizeType = "APPAREL";
+
     // Getters and setters
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -23,4 +25,7 @@ public class CategoryRequest {
 
     public UUID getParentId() { return parentId; }
     public void setParentId(UUID parentId) { this.parentId = parentId; }
+
+    public String getSizeType() { return sizeType; }
+    public void setSizeType(String sizeType) { this.sizeType = sizeType; }
 }

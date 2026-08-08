@@ -14,7 +14,7 @@ public class AddressResponse {
     private String state;
     private String postalCode;
     private String country;
-    private boolean isDefault;
+    private boolean defaultAddress;
 
     public static AddressResponse from(Address address) {
         AddressResponse response = new AddressResponse();
@@ -26,7 +26,7 @@ public class AddressResponse {
         response.state = address.getState();
         response.postalCode = address.getPostalCode();
         response.country = address.getCountry();
-        response.isDefault = address.isDefault();
+        response.defaultAddress = address.isDefault();
         return response;
     }
 
@@ -54,6 +54,6 @@ public class AddressResponse {
     public String getCountry() { return country; }
     public void setCountry(String country) { this.country = country; }
 
-    public boolean isDefault() { return isDefault; }
-    public void setDefault(boolean isDefault) { this.isDefault = isDefault; }
+    public boolean isDefaultAddress() { return defaultAddress; }
+    public void setDefaultAddress(boolean defaultAddress) { this.defaultAddress = defaultAddress; }
 }

@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/variants")
@@ -43,6 +44,11 @@ public class AdminVariantController {
                     return ResponseEntity.ok(variantRepository.save(variant));
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/product/{productId}")
+    public List<ProductVariant> getVariantsForProduct(@PathVariable UUID productId) {
+        return variantRepository.findByProductId(productId);
     }
 
     @DeleteMapping("/{id}")

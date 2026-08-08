@@ -21,6 +21,7 @@ public class AdminCategoryController {
         Category category = new Category();
         category.setName(request.getName());
         category.setSlug(request.getSlug());
+        category.setSizeType(request.getSizeType());
 
         if (request.getParentId() != null) {
             Category parent = categoryRepository.findById(request.getParentId())
