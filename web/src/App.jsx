@@ -11,6 +11,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Orders from './pages/Orders';
 import AdminProducts from './pages/AdminProducts';
+import AdminCoupons from './pages/AdminCoupons';
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/orders" element={<Orders />} />
               <Route path="/admin/products" element={<AdminProducts />} />
+              <Route path="/admin/coupons" element={<AdminCoupons />} />
             </Routes>
           </main>
           <Footer />

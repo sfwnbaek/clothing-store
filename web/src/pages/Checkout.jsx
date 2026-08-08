@@ -59,6 +59,8 @@ export default function Checkout() {
   const [order, setOrder] = useState(null);
   const [error, setError] = useState('');
   const [placing, setPlacing] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+
 
   useEffect(() => {
     if (authLoading) return;
@@ -70,24 +72,29 @@ export default function Checkout() {
   }
 
   async function handlePlaceOrder(e) {
-    e.preventDefault();
-    setPlacing(true);
-    setError('');
-    try {
-      const result = await api.post('/checkout', address);
-      setOrder(result.order);
-      setClientSecret(result.clientSecret);
-    } catch (err) {
-      setError(err.message || 'Checkout failed.');
-    } finally {
-      setPlacing(false);
-    }
+  e.preventDefault();
+  setPlacing(true);
+  setError('');
+  try {
+    const result = await api.post('/checkout', { ...address, couponCode: couponCode || undefined });
+    setOrder(result.order);
+    setClientSecret(result.clientSecret);
+  } catch (err) {
+    setError(err.message || 'Checkout failed.');
+  } finally {
+    setPlacing(false);
   }
+}
 
   if (clientSecret) {
     return (
       <div className="max-w-md mx-auto px-6 py-16">
         <h1 className="font-display font-black text-3xl uppercase tracking-tight mb-2">Payment</h1>
+        {order.discountAmount > 0 && (
+        <p className="text-sm text-accent mb-2">
+            Discount ({order.couponCode}): -${order.discountAmount.toFixed(2)}
+        </p>
+        )}
         <p className="text-graphite text-sm mb-8">Order total: ${order.total.toFixed(2)}</p>
         <Elements stripe={stripePromise} options={{ clientSecret }}>
           <CheckoutForm orderId={order.id} />
@@ -143,6 +150,13 @@ export default function Checkout() {
         </div>
 
         {error && <p className="text-sm text-accent">{error}</p>}
+
+        <input
+            type="text" placeholder="Discount code (optional)"
+            value={couponCode}
+            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+            className="border border-hairline px-4 py-3 text-sm"
+            />
 
         <button
           type="submit"

@@ -18,6 +18,7 @@ export default function AdminProducts() {
   const [categoryForm, setCategoryForm] = useState({ name: '', slug: '' });
   const [categoryError, setCategoryError] = useState('');
   const [savingCategory, setSavingCategory] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -41,27 +42,47 @@ export default function AdminProducts() {
     api.get('/categories').then(setCategories).catch(() => setCategories([]));
   }
 
+  function startEdit(product) {
+  setEditingId(product.id);
+  setForm({
+    name: product.name,
+    slug: product.slug,
+    description: product.description || '',
+    basePrice: product.basePrice.toString(),
+    brand: product.brand || '',
+    categoryId: product.category?.id || '',
+  });
+}
+
+function cancelEdit() {
+  setEditingId(null);
+  setForm({ name: '', slug: '', description: '', basePrice: '', brand: '', categoryId: '' });
+}
+
   function updateField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  async function handleCreate(e) {
-    e.preventDefault();
-    setSaving(true);
-    setError('');
-    try {
-      await api.post('/admin/products', {
-        ...form,
-        basePrice: parseFloat(form.basePrice),
-      });
-      setForm({ name: '', slug: '', description: '', basePrice: '', brand: '', categoryId: '' });
-      loadProducts();
-    } catch (err) {
-      setError('Could not create product. Check all fields are valid.');
-    } finally {
-      setSaving(false);
+  async function handleSubmit(e) {
+  e.preventDefault();
+  setSaving(true);
+  setError('');
+  try {
+    const payload = { ...form, basePrice: parseFloat(form.basePrice) };
+    if (editingId) {
+      await api.put(`/admin/products/${editingId}`, payload);
+    } else {
+      await api.post('/admin/products', payload);
     }
+    setForm({ name: '', slug: '', description: '', basePrice: '', brand: '', categoryId: '' });
+    setEditingId(null);
+    loadProducts();
+  } catch (err) {
+    setError('Could not save product. Check all fields are valid.');
+  } finally {
+    setSaving(false);
   }
+}
 
   async function handleDelete(id) {
     if (!confirm('Delete this product?')) return;
@@ -159,54 +180,66 @@ export default function AdminProducts() {
         </div>
       </section>
 
-      <form onSubmit={handleCreate} className="border border-hairline p-6 mb-12">
-        <h2 className="font-display font-bold text-sm uppercase tracking-wide mb-4">Add Product</h2>
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <input
-            type="text" placeholder="Name" required
-            value={form.name} onChange={(e) => updateField('name', e.target.value)}
-            className="border border-hairline px-4 py-2 text-sm"
-          />
-          <input
-            type="text" placeholder="Slug (url-friendly)" required
-            value={form.slug} onChange={(e) => updateField('slug', e.target.value)}
-            className="border border-hairline px-4 py-2 text-sm"
-          />
-          <input
-            type="number" step="0.01" placeholder="Base Price" required
-            value={form.basePrice} onChange={(e) => updateField('basePrice', e.target.value)}
-            className="border border-hairline px-4 py-2 text-sm"
-          />
-          <input
-            type="text" placeholder="Brand"
-            value={form.brand} onChange={(e) => updateField('brand', e.target.value)}
-            className="border border-hairline px-4 py-2 text-sm"
-          />
-          <select
-            value={form.categoryId}
-            onChange={(e) => updateField('categoryId', e.target.value)}
-            className="border border-hairline px-4 py-2 text-sm col-span-2"
-          >
-            <option value="">Select a category...</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
-            ))}
-          </select>
-          <textarea
-            placeholder="Description"
-            value={form.description} onChange={(e) => updateField('description', e.target.value)}
-            className="border border-hairline px-4 py-2 text-sm col-span-2"
-            rows={3}
-          />
-        </div>
-        {error && <p className="text-sm text-accent mb-4">{error}</p>}
-        <button
-          type="submit" disabled={saving}
-          className="bg-ink text-paper font-display font-bold uppercase tracking-wide px-6 py-3 text-sm hover:bg-accent transition-colors disabled:opacity-50"
-        >
-          {saving ? 'Saving...' : 'Add Product'}
-        </button>
-      </form>
+      <form onSubmit={handleSubmit} className="border border-hairline p-6 mb-12">
+            <h2 className="font-display font-bold text-sm uppercase tracking-wide mb-4">
+                {editingId ? 'Edit Product' : 'Add Product'}
+            </h2>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+                <input
+                type="text" placeholder="Name" required
+                value={form.name} onChange={(e) => updateField('name', e.target.value)}
+                className="border border-hairline px-4 py-2 text-sm"
+                />
+                <input
+                type="text" placeholder="Slug (url-friendly)" required
+                value={form.slug} onChange={(e) => updateField('slug', e.target.value)}
+                className="border border-hairline px-4 py-2 text-sm"
+                />
+                <input
+                type="number" step="0.01" placeholder="Base Price" required
+                value={form.basePrice} onChange={(e) => updateField('basePrice', e.target.value)}
+                className="border border-hairline px-4 py-2 text-sm"
+                />
+                <input
+                type="text" placeholder="Brand"
+                value={form.brand} onChange={(e) => updateField('brand', e.target.value)}
+                className="border border-hairline px-4 py-2 text-sm"
+                />
+                <select
+                value={form.categoryId}
+                onChange={(e) => updateField('categoryId', e.target.value)}
+                className="border border-hairline px-4 py-2 text-sm col-span-2"
+                >
+                <option value="">Select a category...</option>
+                {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+                </select>
+                <textarea
+                placeholder="Description"
+                value={form.description} onChange={(e) => updateField('description', e.target.value)}
+                className="border border-hairline px-4 py-2 text-sm col-span-2"
+                rows={3}
+                />
+            </div>
+            {error && <p className="text-sm text-accent mb-4">{error}</p>}
+            <div className="flex gap-3">
+                <button
+                type="submit" disabled={saving}
+                className="bg-ink text-paper font-display font-bold uppercase tracking-wide px-6 py-3 text-sm hover:bg-accent transition-colors disabled:opacity-50"
+                >
+                {saving ? 'Saving...' : editingId ? 'Update Product' : 'Add Product'}
+                </button>
+                {editingId && (
+                <button
+                    type="button" onClick={cancelEdit}
+                    className="text-sm text-graphite hover:text-ink underline"
+                >
+                    Cancel
+                </button>
+                )}
+            </div>
+            </form>
 
       <h2 className="font-display font-bold text-sm uppercase tracking-wide mb-4">All Products</h2>
       <div className="flex flex-col gap-2">
@@ -232,25 +265,17 @@ export default function AdminProducts() {
 
             <div className="flex items-center gap-4">
                 <label className="text-sm text-graphite hover:text-ink underline cursor-pointer">
-                Upload Image
-                <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                    if (e.target.files[0]) {
-                        handleImageUpload(product.id, e.target.files[0]);
-                    }
-                    }}
-                />
+                    Upload Image
+                    <input type="file" accept="image/*" className="hidden"
+                    onChange={(e) => e.target.files[0] && handleImageUpload(product.id, e.target.files[0])} />
                 </label>
-                <button
-                onClick={() => handleDelete(product.id)}
-                className="text-sm text-graphite hover:text-accent underline"
-                >
-                Delete
+                <button onClick={() => startEdit(product)} className="text-sm text-graphite hover:text-ink underline">
+                    Edit
                 </button>
-            </div>
+                <button onClick={() => handleDelete(product.id)} className="text-sm text-graphite hover:text-accent underline">
+                    Delete
+                </button>
+                </div>
             </div>
         ))}
         </div>

@@ -20,8 +20,11 @@ export default function Header() {
           {user ? (
             <>
                 {user.role === 'ADMIN' && (
+            <>
                 <Link to="/admin/products" className="hover:text-accent transition-colors">Admin</Link>
-                )}
+                <Link to="/admin/coupons" className="hover:text-accent transition-colors">Coupons</Link>
+            </>
+            )}
                 <Link to="/orders" className="hover:text-accent transition-colors">Orders</Link>
                 <button onClick={logout} className="hover:text-accent transition-colors">Sign Out</button>
             </>
