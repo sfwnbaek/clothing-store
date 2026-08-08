@@ -99,7 +99,7 @@ export default function AdminCategoriesTab() {
           >
             <option value="APPAREL">Apparel (S/M/L/XL)</option>
             <option value="SHOE">Shoe Sizes</option>
-            <option value="ONE_SIZE">One Size</option>
+            <option value="ONE_SIZE">One Size Fits All</option>
           </select>
         </div>
         <button
