@@ -15,10 +15,22 @@ export default function AdminProducts() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const [categoryForm, setCategoryForm] = useState({ name: '', slug: '' });
+  const [categoryForm, setCategoryForm] = useState({ name: '', slug: '', sizeType: 'APPAREL' });
   const [categoryError, setCategoryError] = useState('');
   const [savingCategory, setSavingCategory] = useState(false);
   const [editingId, setEditingId] = useState(null);
+
+  const [variantProductId, setVariantProductId] = useState('');
+  const [variants, setVariants] = useState([]);
+  const [variantForm, setVariantForm] = useState({ sku: '', size: '', color: '', stockQty: '' });
+  const [variantError, setVariantError] = useState('');
+  const [savingVariant, setSavingVariant] = useState(false);
+
+  const SIZE_OPTIONS = {
+    SHOE: ['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12'],
+    APPAREL: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+    ONE_SIZE: ['One Size'],
+};
 
   useEffect(() => {
     if (authLoading) return;
@@ -50,7 +62,7 @@ export default function AdminProducts() {
     description: product.description || '',
     basePrice: product.basePrice.toString(),
     brand: product.brand || '',
-    categoryId: product.category?.id || '',
+    categoryId: product.categoryId || '',
   });
 }
 
@@ -62,6 +74,54 @@ function cancelEdit() {
   function updateField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
+
+  function getSizeOptionsForProduct(productId) {
+  const product = products.find((p) => p.id === productId);
+  const category = categories.find((c) => c.id === product?.categoryId);
+  const sizeType = category?.sizeType || 'APPAREL';
+  return SIZE_OPTIONS[sizeType] || SIZE_OPTIONS.APPAREL;
+}
+
+function loadVariants(productId) {
+  setVariantProductId(productId);
+  if (!productId) {
+    setVariants([]);
+    return;
+  }
+  api.get(`/admin/variants/product/${productId}`).then(setVariants).catch(() => setVariants([]));
+}
+
+async function handleCreateVariant(e) {
+  e.preventDefault();
+  setSavingVariant(true);
+  setVariantError('');
+  try {
+    await api.post('/admin/variants', {
+      productId: variantProductId,
+      sku: variantForm.sku,
+      size: variantForm.size,
+      color: variantForm.color,
+      stockQty: parseInt(variantForm.stockQty),
+    });
+    setVariantForm({ sku: '', size: '', color: '', stockQty: '' });
+    loadVariants(variantProductId);
+  } catch (err) {
+    setVariantError('Could not create variant. SKU may already be in use.');
+  } finally {
+    setSavingVariant(false);
+  }
+}
+
+async function handleDeleteVariant(id) {
+  if (!confirm('Delete this variant?')) return;
+  await api.delete(`/admin/variants/${id}`);
+  loadVariants(variantProductId);
+}
+
+async function handleUpdateStock(id, newStock) {
+  await api.patch(`/admin/variants/${id}/stock?stockQty=${newStock}`, {});
+  loadVariants(variantProductId);
+}
 
   async function handleSubmit(e) {
   e.preventDefault();
@@ -96,7 +156,7 @@ function cancelEdit() {
     setCategoryError('');
     try {
       await api.post('/admin/categories', categoryForm);
-      setCategoryForm({ name: '', slug: '' });
+      setCategoryForm({ name: '', slug: '', sizeType: 'APPAREL' });
       loadCategories();
     } catch (err) {
       setCategoryError('Could not create category. Slug may already be in use.');
@@ -143,7 +203,7 @@ function cancelEdit() {
       <section className="border border-hairline p-6 mb-8">
         <h2 className="font-display font-bold text-sm uppercase tracking-wide mb-4">Categories</h2>
 
-        <form onSubmit={handleCreateCategory} className="flex gap-4 mb-6">
+        <form onSubmit={handleCreateCategory} className="grid grid-cols-3 gap-4 mb-6">
           <input
             type="text" placeholder="Name" required
             value={categoryForm.name}
@@ -156,6 +216,15 @@ function cancelEdit() {
             onChange={(e) => setCategoryForm((p) => ({ ...p, slug: e.target.value }))}
             className="border border-hairline px-4 py-2 text-sm flex-1"
           />
+          <select
+            value={categoryForm.sizeType}
+            onChange={(e) => setCategoryForm((p) => ({ ...p, sizeType: e.target.value }))}
+            className="border border-hairline px-4 py-2 text-sm"
+            >
+            <option value="APPAREL">Apparel (S/M/L/XL)</option>
+            <option value="SHOE">Shoe Sizes</option>
+            <option value="ONE_SIZE">One Size</option>
+            </select>
           <button
             type="submit" disabled={savingCategory}
             className="bg-ink text-paper font-display font-bold uppercase tracking-wide px-6 py-2 text-sm hover:bg-accent transition-colors disabled:opacity-50 whitespace-nowrap"
@@ -179,6 +248,87 @@ function cancelEdit() {
           ))}
         </div>
       </section>
+
+      <section className="border border-hairline p-6 mb-8">
+  <h2 className="font-display font-bold text-sm uppercase tracking-wide mb-4">Variants</h2>
+
+  <select
+    value={variantProductId}
+    onChange={(e) => loadVariants(e.target.value)}
+    className="border border-hairline px-4 py-2 text-sm mb-4 w-full"
+  >
+    <option value="">Select a product...</option>
+    {products.map((p) => (
+      <option key={p.id} value={p.id}>{p.name}</option>
+    ))}
+  </select>
+
+  {variantProductId && (
+    <>
+      <div className="flex flex-col gap-2 mb-4">
+        {variants.length === 0 && <p className="text-sm text-graphite">No variants yet.</p>}
+        {variants.map((v) => (
+          <div key={v.id} className="flex items-center justify-between border-b border-hairline py-2 text-sm">
+            <span>{v.sku} · {v.size} · {v.color} · Stock: {v.stockQty}</span>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                defaultValue={v.stockQty}
+                onBlur={(e) => {
+                  const newVal = parseInt(e.target.value);
+                  if (!isNaN(newVal) && newVal !== v.stockQty) handleUpdateStock(v.id, newVal);
+                }}
+                className="border border-hairline w-16 px-2 py-1 text-sm"
+              />
+              <button onClick={() => handleDeleteVariant(v.id)} className="text-graphite hover:text-accent underline">
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <form onSubmit={handleCreateVariant} className="grid grid-cols-2 gap-3">
+        <input
+          type="text" placeholder="SKU" required
+          value={variantForm.sku}
+          onChange={(e) => setVariantForm((p) => ({ ...p, sku: e.target.value }))}
+          className="border border-hairline px-3 py-2 text-sm"
+        />
+        <select
+          value={variantForm.size}
+          onChange={(e) => setVariantForm((p) => ({ ...p, size: e.target.value }))}
+          required
+          className="border border-hairline px-3 py-2 text-sm"
+        >
+          <option value="">Select size...</option>
+          {getSizeOptionsForProduct(variantProductId).map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <input
+          type="text" placeholder="Color"
+          value={variantForm.color}
+          onChange={(e) => setVariantForm((p) => ({ ...p, color: e.target.value }))}
+          className="border border-hairline px-3 py-2 text-sm"
+        />
+        <input
+          type="number" placeholder="Stock Quantity" required
+          value={variantForm.stockQty}
+          onChange={(e) => setVariantForm((p) => ({ ...p, stockQty: e.target.value }))}
+          className="border border-hairline px-3 py-2 text-sm"
+        />
+        {variantError && <p className="text-sm text-accent col-span-2">{variantError}</p>}
+        <button
+          type="submit" disabled={savingVariant}
+          className="bg-ink text-paper font-display font-bold uppercase tracking-wide px-4 py-2 text-sm hover:bg-accent transition-colors disabled:opacity-50 col-span-2"
+        >
+          {savingVariant ? 'Adding...' : 'Add Variant'}
+        </button>
+      </form>
+    </>
+  )}
+</section>
 
       <form onSubmit={handleSubmit} className="border border-hairline p-6 mb-12">
             <h2 className="font-display font-bold text-sm uppercase tracking-wide mb-4">

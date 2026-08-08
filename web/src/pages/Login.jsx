@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 export default function Login() {
   const { login } = useAuth();
@@ -9,20 +10,21 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
 
   async function handleSubmit(e) {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      await login(email, password);
-      navigate('/');
-    } catch (err) {
-      setError('Invalid email or password.');
-    } finally {
-      setLoading(false);
-    }
+  e.preventDefault();
+  setLoading(true);
+  try {
+    await login(email, password);
+    showToast('Welcome back!');
+    navigate('/');
+  } catch (err) {
+    showToast('Invalid email or password.', 'error');
+  } finally {
+    setLoading(false);
   }
+}
 
   return (
     <div className="max-w-md mx-auto px-6 py-16">
