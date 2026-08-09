@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import ProductCard from '../components/product/ProductCard';
+import ProductSkeleton from '../components/product/ProductSkeleton';
+import CategoryCarousel from '../components/product/CategoryCarousel';
 
 export default function Home() {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -12,6 +15,8 @@ export default function Home() {
       .then((data) => setProducts(data.slice(0, 4)))
       .catch(() => setProducts([]))
       .finally(() => setLoading(false));
+
+    api.get('/categories').then(setCategories).catch(() => setCategories([]));
   }, []);
 
   return (
@@ -31,16 +36,20 @@ export default function Home() {
         </Link>
       </section>
 
+      <CategoryCarousel categories={categories} />
+
       <section className="max-w-7xl mx-auto px-6 pb-24">
         <h2 className="font-display font-bold text-2xl uppercase tracking-tight mb-8">
           Latest Drops
         </h2>
         {loading ? (
-          <p className="text-graphite">Loading...</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {Array.from({ length: 4 }).map((_, i) => <ProductSkeleton key={i} />)}
+          </div>
         ) : products.length === 0 ? (
           <p className="text-graphite">No products yet.</p>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 animate-fade-in">
             {products.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}

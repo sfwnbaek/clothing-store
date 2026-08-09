@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { formatPrice, formatDate } from '../utils/format';
 
 const statusStyles = {
   PAID: 'text-green-700 bg-green-50',
@@ -49,7 +50,7 @@ export default function Orders() {
             <div className="flex justify-between items-start mb-4">
               <div>
                 <p className="text-xs text-graphite uppercase tracking-wide mb-1">
-                  {new Date(order.createdAt).toLocaleDateString()}
+                  {formatDate(order.createdAt)}
                 </p>
                 <p className="font-display font-bold text-sm">Order #{order.id.slice(0, 8)}</p>
               </div>
@@ -62,14 +63,34 @@ export default function Orders() {
               {order.items.map((item) => (
                 <div key={item.id} className="flex justify-between text-sm">
                   <span>{item.productName} · Size {item.size} · Qty {item.quantity}</span>
-                  <span>${(item.unitPrice * item.quantity).toFixed(2)}</span>
+                  <span>{formatPrice(item.unitPrice * item.quantity)}</span>
                 </div>
               ))}
             </div>
 
-            <div className="flex justify-between font-semibold pt-4 border-t border-hairline">
-              <span>Total</span>
-              <span>${order.total.toFixed(2)}</span>
+            <div className="border-t border-hairline pt-4 flex flex-col gap-1 text-sm">
+              <div className="flex justify-between text-graphite">
+                <span>Subtotal</span>
+                <span>{formatPrice(order.subtotal)}</span>
+              </div>
+              {order.discountAmount > 0 && (
+                <div className="flex justify-between text-accent">
+                  <span>Discount {order.couponCode ? `(${order.couponCode})` : ''}</span>
+                  <span>-{formatPrice(order.discountAmount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-graphite">
+                <span>Shipping</span>
+                <span>{formatPrice(order.shippingCost)}</span>
+              </div>
+              <div className="flex justify-between text-graphite">
+                <span>Tax</span>
+                <span>{formatPrice(order.tax)}</span>
+              </div>
+              <div className="flex justify-between font-semibold pt-2 mt-1 border-t border-hairline">
+                <span>Total</span>
+                <span>{formatPrice(order.total)}</span>
+              </div>
             </div>
           </div>
         ))}

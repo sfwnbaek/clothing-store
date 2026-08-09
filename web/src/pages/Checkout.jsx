@@ -4,11 +4,12 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 import { stripePromise } from '../stripe';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { formatPrice } from '../utils/format';
 
-function CheckoutForm({ orderId }) {
+function CheckoutForm() {
   const stripe = useStripe();
   const elements = useElements();
-  const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -30,7 +31,6 @@ function CheckoutForm({ orderId }) {
       setError(confirmError.message);
       setSubmitting(false);
     }
-    // On success, Stripe redirects to return_url automatically
   }
 
   return (
@@ -40,8 +40,11 @@ function CheckoutForm({ orderId }) {
       <button
         type="submit"
         disabled={!stripe || submitting}
-        className="bg-ink text-paper font-display font-bold uppercase tracking-wide py-4 hover:bg-accent transition-colors disabled:opacity-50"
+        className="bg-ink text-paper font-display font-bold uppercase tracking-wide py-4 hover:bg-accent transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
       >
+        {submitting && (
+          <span className="w-4 h-4 border-2 border-paper/40 border-t-paper rounded-full animate-spin" />
+        )}
         {submitting ? 'Processing...' : 'Pay Now'}
       </button>
     </form>
@@ -50,6 +53,7 @@ function CheckoutForm({ orderId }) {
 
 export default function Checkout() {
   const { user, loading: authLoading } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
   const [address, setAddress] = useState({
@@ -57,7 +61,6 @@ export default function Checkout() {
   });
   const [clientSecret, setClientSecret] = useState(null);
   const [order, setOrder] = useState(null);
-  const [error, setError] = useState('');
   const [placing, setPlacing] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [savedAddresses, setSavedAddresses] = useState([]);
@@ -108,37 +111,58 @@ export default function Checkout() {
   async function handlePlaceOrder(e) {
     e.preventDefault();
     setPlacing(true);
-    setError('');
     try {
       const result = await api.post('/checkout', { ...address, couponCode: couponCode || undefined });
       setOrder(result.order);
       setClientSecret(result.clientSecret);
     } catch (err) {
-      setError(err.message || 'Checkout failed.');
+      showToast(err.message || 'Checkout failed.', 'error');
     } finally {
       setPlacing(false);
     }
   }
 
+  const inputClass = "border border-hairline px-4 py-3 text-sm focus:outline-none focus:border-ink transition-colors";
+
   if (clientSecret) {
     return (
-      <div className="max-w-md mx-auto px-6 py-16">
-        <h1 className="font-display font-black text-3xl uppercase tracking-tight mb-2">Payment</h1>
-        {order.discountAmount > 0 && (
-          <p className="text-sm text-accent mb-2">
-            Discount ({order.couponCode}): -${order.discountAmount.toFixed(2)}
-          </p>
-        )}
-        <p className="text-graphite text-sm mb-8">Order total: ${order.total.toFixed(2)}</p>
+      <div className="max-w-md mx-auto px-6 py-16 animate-fade-in">
+        <h1 className="font-display font-black text-3xl uppercase tracking-tight mb-4">Payment</h1>
+
+        <div className="border border-hairline p-4 mb-8 text-sm flex flex-col gap-1">
+          <div className="flex justify-between text-graphite">
+            <span>Subtotal</span>
+            <span>{formatPrice(order.subtotal)}</span>
+          </div>
+          {order.discountAmount > 0 && (
+            <div className="flex justify-between text-accent">
+              <span>Discount {order.couponCode ? `(${order.couponCode})` : ''}</span>
+              <span>-{formatPrice(order.discountAmount)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-graphite">
+            <span>Shipping</span>
+            <span>{formatPrice(order.shippingCost)}</span>
+          </div>
+          <div className="flex justify-between text-graphite">
+            <span>Tax</span>
+            <span>{formatPrice(order.tax)}</span>
+          </div>
+          <div className="flex justify-between font-semibold pt-2 mt-1 border-t border-hairline">
+            <span>Total</span>
+            <span>{formatPrice(order.total)}</span>
+          </div>
+        </div>
+
         <Elements stripe={stripePromise} options={{ clientSecret }}>
-          <CheckoutForm orderId={order.id} />
+          <CheckoutForm />
         </Elements>
       </div>
     );
   }
 
   return (
-    <div className="max-w-md mx-auto px-6 py-16">
+    <div className="max-w-md mx-auto px-6 py-16 animate-fade-in">
       <h1 className="font-display font-black text-3xl uppercase tracking-tight mb-8">Shipping</h1>
 
       {savedAddresses.length > 0 && (
@@ -148,8 +172,8 @@ export default function Checkout() {
             {savedAddresses.map((addr) => (
               <label
                 key={addr.id}
-                className={`border p-3 text-sm cursor-pointer flex items-start gap-3 ${
-                  selectedAddressId === addr.id && !useNewAddress ? 'border-ink' : 'border-hairline'
+                className={`border p-3 text-sm cursor-pointer flex items-start gap-3 transition-colors ${
+                  selectedAddressId === addr.id && !useNewAddress ? 'border-ink' : 'border-hairline hover:border-graphite'
                 }`}
               >
                 <input
@@ -170,7 +194,9 @@ export default function Checkout() {
                 </span>
               </label>
             ))}
-            <label className={`border p-3 text-sm cursor-pointer flex items-center gap-3 ${useNewAddress ? 'border-ink' : 'border-hairline'}`}>
+            <label className={`border p-3 text-sm cursor-pointer flex items-center gap-3 transition-colors ${
+              useNewAddress ? 'border-ink' : 'border-hairline hover:border-graphite'
+            }`}>
               <input
                 type="radio"
                 checked={useNewAddress}
@@ -193,26 +219,26 @@ export default function Checkout() {
               type="text" placeholder="Address Line 1" required
               value={address.addressLine1}
               onChange={(e) => updateField('addressLine1', e.target.value)}
-              className="border border-hairline px-4 py-3 text-sm"
+              className={inputClass}
             />
             <input
               type="text" placeholder="Address Line 2 (optional)"
               value={address.addressLine2}
               onChange={(e) => updateField('addressLine2', e.target.value)}
-              className="border border-hairline px-4 py-3 text-sm"
+              className={inputClass}
             />
             <div className="flex gap-4">
               <input
                 type="text" placeholder="City" required
                 value={address.city}
                 onChange={(e) => updateField('city', e.target.value)}
-                className="border border-hairline px-4 py-3 text-sm flex-1"
+                className={`${inputClass} flex-1`}
               />
               <input
                 type="text" placeholder="State" required
                 value={address.state}
                 onChange={(e) => updateField('state', e.target.value)}
-                className="border border-hairline px-4 py-3 text-sm flex-1"
+                className={`${inputClass} flex-1`}
               />
             </div>
             <div className="flex gap-4">
@@ -220,32 +246,33 @@ export default function Checkout() {
                 type="text" placeholder="Postal Code" required
                 value={address.postalCode}
                 onChange={(e) => updateField('postalCode', e.target.value)}
-                className="border border-hairline px-4 py-3 text-sm flex-1"
+                className={`${inputClass} flex-1`}
               />
               <input
                 type="text" placeholder="Country" required
                 value={address.country}
                 onChange={(e) => updateField('country', e.target.value)}
-                className="border border-hairline px-4 py-3 text-sm flex-1"
+                className={`${inputClass} flex-1`}
               />
             </div>
           </>
         )}
 
-        {error && <p className="text-sm text-accent">{error}</p>}
-
         <input
           type="text" placeholder="Discount code (optional)"
           value={couponCode}
           onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-          className="border border-hairline px-4 py-3 text-sm"
+          className={inputClass}
         />
 
         <button
           type="submit"
           disabled={placing}
-          className="bg-ink text-paper font-display font-bold uppercase tracking-wide py-4 hover:bg-accent transition-colors disabled:opacity-50"
+          className="bg-ink text-paper font-display font-bold uppercase tracking-wide py-4 hover:bg-accent transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >
+          {placing && (
+            <span className="w-4 h-4 border-2 border-paper/40 border-t-paper rounded-full animate-spin" />
+          )}
           {placing ? 'Placing Order...' : 'Continue to Payment'}
         </button>
       </form>
