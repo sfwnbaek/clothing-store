@@ -112,7 +112,7 @@ public class CheckoutService {
 
             PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
                     .setAmount(amountInCents)
-                    .setCurrency("usd")
+                    .setCurrency("myr")
                     .putMetadata("orderId", savedOrder.getId().toString())
                     .setAutomaticPaymentMethods(
                         PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
