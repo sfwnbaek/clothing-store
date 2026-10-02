@@ -1,14 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { api } from '../api/client';
 import ProductCard from '../components/product/ProductCard';
 import ProductSkeleton from '../components/product/ProductSkeleton';
+
+gsap.registerPlugin(ScrollTrigger);
 
 export default function ProductListing() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const gridRef = useRef(null);
 
   const category = searchParams.get('category') || '';
   const sort = searchParams.get('sort') || 'name';
@@ -30,6 +35,29 @@ export default function ProductListing() {
       .catch(() => setProducts([]))
       .finally(() => setLoading(false));
   }, [category, sort, direction]);
+
+  useEffect(() => {
+    if (loading || !gridRef.current) return;
+    const cards = gridRef.current.querySelectorAll('.product-card-item');
+
+    gsap.fromTo(
+      cards,
+      { opacity: 0, y: 30 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        ease: 'power3.out',
+        stagger: 0.08,
+        scrollTrigger: {
+          trigger: gridRef.current,
+          start: 'top 85%',
+        },
+      }
+    );
+
+    return () => ScrollTrigger.getAll().forEach((t) => t.kill());
+  }, [products, loading]);
 
   function updateParam(key, value) {
     const next = new URLSearchParams(searchParams);
@@ -112,9 +140,11 @@ export default function ProductListing() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-8 animate-fade-in">
+            <div ref={gridRef} className="grid grid-cols-2 md:grid-cols-3 gap-8">
               {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <div key={product.id} className="product-card-item">
+                  <ProductCard product={product} />
+                </div>
               ))}
             </div>
           )}
