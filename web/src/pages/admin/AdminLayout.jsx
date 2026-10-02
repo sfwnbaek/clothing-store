@@ -5,12 +5,14 @@ import AdminCategoriesTab from './AdminCategoriesTab';
 import AdminProductsTab from './AdminProductsTab';
 import AdminVariantsTab from './AdminVariantsTab';
 import AdminCouponsTab from './AdminCouponsTab';
+import AdminBannersTab from './AdminBannersTab';
 
 const TABS = [
   { key: 'products', label: 'Products' },
   { key: 'categories', label: 'Categories' },
   { key: 'variants', label: 'Variants' },
   { key: 'coupons', label: 'Coupons' },
+  { key: 'banners', label: 'Banners' },
 ];
 
 export default function AdminLayout() {
@@ -52,6 +54,7 @@ export default function AdminLayout() {
       {activeTab === 'categories' && <AdminCategoriesTab />}
       {activeTab === 'variants' && <AdminVariantsTab />}
       {activeTab === 'coupons' && <AdminCouponsTab />}
+      {activeTab === 'banners' && <AdminBannersTab />}
     </div>
   );
 }

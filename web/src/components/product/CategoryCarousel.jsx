@@ -13,7 +13,7 @@ export default function CategoryCarousel({ categories }) {
   if (categories.length === 0) return null;
 
   return (
-    <section className="max-w-7xl mx-auto px-6 pb-24">
+    <section className="max-w-7xl mx-auto px-6 pt-12 pb-24">
       <div className="flex items-center justify-between mb-6">
         <h2 className="font-display font-bold text-2xl uppercase tracking-tight">Shop by Category</h2>
         <div className="hidden md:flex gap-2">
