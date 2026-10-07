@@ -15,18 +15,22 @@ export default function ProductListing() {
   const [loading, setLoading] = useState(true);
   const gridRef = useRef(null);
 
+  // 1. Grab search from the URL along with your other params
   const category = searchParams.get('category') || '';
   const sort = searchParams.get('sort') || 'name';
   const direction = searchParams.get('direction') || 'asc';
+  const search = searchParams.get('search') || ''; // <-- ADDED SEARCH
 
   useEffect(() => {
     api.get('/categories').then(setCategories).catch(() => setCategories([]));
   }, []);
 
+  // 2. Fetch products whenever ANY of the URL parameters change
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams();
     if (category) params.set('category', category);
+    if (search) params.set('search', search); // <-- ADDED SEARCH TO BACKEND CALL
     params.set('sort', sort);
     params.set('direction', direction);
 
@@ -34,7 +38,7 @@ export default function ProductListing() {
       .then(setProducts)
       .catch(() => setProducts([]))
       .finally(() => setLoading(false));
-  }, [category, sort, direction]);
+  }, [category, sort, direction, search]); // <-- ADDED SEARCH TO DEPENDENCIES
 
   useEffect(() => {
     if (loading || !gridRef.current) return;
@@ -69,13 +73,20 @@ export default function ProductListing() {
     setSearchParams(next);
   }
 
+  // Helper to clear everything when no products are found
+  function clearAllFilters() {
+    setSearchParams(new URLSearchParams());
+  }
+
   const activeCategoryName = categories.find((c) => c.slug === category)?.name;
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12">
+      {/* 3. Update Title to show what they searched for */}
       <h1 className="font-display font-black text-4xl uppercase tracking-tight mb-2">
-        {activeCategoryName || 'All Products'}
+        {search ? `Results for "${search}"` : (activeCategoryName || 'All Products')}
       </h1>
+      
       <p className="text-graphite text-sm mb-8">
         {loading ? 'Loading products...' : `${products.length} ${products.length === 1 ? 'item' : 'items'}`}
       </p>
@@ -133,10 +144,10 @@ export default function ProductListing() {
             <div className="py-16 text-center">
               <p className="text-graphite mb-2">No products found.</p>
               <button
-                onClick={() => updateParam('category', '')}
+                onClick={clearAllFilters}
                 className="text-accent text-sm underline"
               >
-                Clear filters
+                Clear all filters and searches
               </button>
             </div>
           ) : (

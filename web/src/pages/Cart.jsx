@@ -36,6 +36,7 @@ export default function Cart() {
     try {
       const updated = await api.patch(`/cart/items/${itemId}`, { quantity });
       setCart(updated);
+      window.dispatchEvent(new Event('cartUpdated')); // Broadcast change
     } catch (err) {
       showToast('Could not update quantity.', 'error');
     } finally {
@@ -49,6 +50,7 @@ export default function Cart() {
       const updated = await api.delete(`/cart/items/${itemId}`);
       setCart(updated);
       showToast('Item removed.');
+      window.dispatchEvent(new Event('cartUpdated')); // Broadcast change
     } catch (err) {
       showToast('Could not remove item.', 'error');
     } finally {
