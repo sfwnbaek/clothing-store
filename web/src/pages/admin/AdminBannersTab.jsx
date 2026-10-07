@@ -1,73 +1,94 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useToast } from '../../context/ToastContext';
 
 export default function AdminBannersTab() {
   const { showToast } = useToast();
   const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Form state
   const [headline, setHeadline] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     loadBanners();
   }, []);
 
   function loadBanners() {
-  setLoading(true);
-  const token = localStorage.getItem('token');
-  console.log('Fetching admin banners with token:', token);
-  fetch('http://localhost:8080/api/admin/banners', {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-    .then((res) => {
-      console.log('Response status:', res.status);
-      return res.json();
+    setLoading(true);
+    const token = localStorage.getItem('token');
+    fetch('http://localhost:8080/api/admin/banners', {
+      headers: { Authorization: `Bearer ${token}` },
     })
-    .then((data) => {
-      console.log('Response data:', data);
-      setBanners(data);
-    })
-    .catch((err) => {
-      console.error('Fetch error:', err);
-      setBanners([]);
-    })
-    .finally(() => setLoading(false));
-}
+      .then((res) => res.json())
+      .then((data) => setBanners(data))
+      .catch((err) => {
+        console.error('Fetch error:', err);
+        setBanners([]);
+      })
+      .finally(() => setLoading(false));
+  }
 
-  async function handleUpload(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    const fileInput = e.target.elements.file;
-    const file = fileInput.files[0];
-    if (!file) {
+    const file = fileInputRef.current?.files[0];
+    
+    // Require a file ONLY if we are creating a new banner
+    if (!editingId && !file) {
       showToast('Please choose an image first.', 'error');
       return;
     }
 
     const formData = new FormData();
-    formData.append('file', file);
-    if (headline) formData.append('headline', headline);
-    if (linkUrl) formData.append('linkUrl', linkUrl);
+    if (file) formData.append('file', file);
+    // Send empty strings if cleared, so backend knows to erase them
+    formData.append('headline', headline || '');
+    formData.append('linkUrl', linkUrl || '');
 
     setUploading(true);
     const token = localStorage.getItem('token');
+    
     try {
-      const res = await fetch('http://localhost:8080/api/admin/banners', {
-        method: 'POST',
+      const url = editingId 
+        ? `http://localhost:8080/api/admin/banners/${editingId}` 
+        : 'http://localhost:8080/api/admin/banners';
+        
+      const res = await fetch(url, {
+        method: editingId ? 'PUT' : 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
+      
       if (!res.ok) throw new Error();
-      setHeadline('');
-      setLinkUrl('');
-      fileInput.value = '';
+      
+      cancelEdit();
       loadBanners();
-      showToast('Banner uploaded.');
+      showToast(editingId ? 'Banner updated.' : 'Banner uploaded.');
     } catch (err) {
-      showToast('Could not upload banner.', 'error');
+      showToast('Could not save banner.', 'error');
     } finally {
       setUploading(false);
     }
+  }
+
+  function handleEditClick(banner) {
+    setEditingId(banner.id);
+    setHeadline(banner.headline || '');
+    setLinkUrl(banner.linkUrl || '');
+    if (fileInputRef.current) fileInputRef.current.value = ''; // clear file input
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll up to form
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setHeadline('');
+    setLinkUrl('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
   async function handleToggle(id) {
@@ -98,7 +119,7 @@ export default function AdminBannersTab() {
     }
   }
 
-  const inputClass = "border border-hairline px-4 py-2 text-sm focus:outline-none focus:border-ink transition-colors";
+  const inputClass = "border border-hairline px-4 py-2 text-sm focus:outline-none focus:border-ink transition-colors w-full";
 
   if (loading) {
     return <div className="text-graphite text-sm">Loading banners...</div>;
@@ -106,10 +127,22 @@ export default function AdminBannersTab() {
 
   return (
     <div className="max-w-3xl">
-      <form onSubmit={handleUpload} className="border border-hairline p-6 mb-10">
-        <h2 className="font-display font-bold text-sm uppercase tracking-wide mb-4">Add Banner</h2>
+      <form onSubmit={handleSubmit} className="border border-hairline p-6 mb-10 bg-white">
+        <h2 className="font-display font-bold text-sm uppercase tracking-wide mb-4">
+          {editingId ? 'Edit Banner' : 'Add Banner'}
+        </h2>
         <div className="flex flex-col gap-4 mb-4">
-          <input type="file" name="file" accept="image/*" className={inputClass} />
+          <div>
+            <span className="text-xs text-graphite mb-1 block">
+              {editingId ? 'Upload new image (optional)' : 'Banner Image'}
+            </span>
+            <input 
+              type="file" 
+              accept="image/*" 
+              ref={fileInputRef}
+              className={`${inputClass} py-1 file:mr-4 file:py-1 file:px-3 file:border-0 file:text-xs file:bg-surface file:text-ink hover:file:bg-hairline`} 
+            />
+          </div>
           <input
             type="text" placeholder="Headline (optional)"
             value={headline} onChange={(e) => setHeadline(e.target.value)}
@@ -121,19 +154,30 @@ export default function AdminBannersTab() {
             className={inputClass}
           />
         </div>
-        <button
-          type="submit" disabled={uploading}
-          className="bg-ink text-paper font-display font-bold uppercase tracking-wide px-6 py-2.5 text-sm hover:bg-accent transition-colors disabled:opacity-50"
-        >
-          {uploading ? 'Uploading...' : 'Upload Banner'}
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            type="submit" disabled={uploading}
+            className="bg-ink text-paper font-display font-bold uppercase tracking-wide px-6 py-2.5 text-sm hover:bg-accent transition-colors disabled:opacity-50"
+          >
+            {uploading ? 'Saving...' : (editingId ? 'Update Banner' : 'Upload Banner')}
+          </button>
+          {editingId && (
+            <button
+              type="button"
+              onClick={cancelEdit}
+              className="text-sm font-medium text-graphite hover:text-ink transition-colors"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       </form>
 
       <h2 className="font-display font-bold text-sm uppercase tracking-wide mb-4">All Banners</h2>
       <div className="flex flex-col gap-4">
         {banners.length === 0 && <p className="text-sm text-graphite">No banners yet.</p>}
         {banners.map((banner) => (
-          <div key={banner.id} className="flex items-center gap-4 border border-hairline p-3">
+          <div key={banner.id} className="flex items-center gap-4 border border-hairline p-3 group">
             <img
               src={`http://localhost:8080${banner.imageUrl}`}
               alt={banner.headline || 'Banner'}
@@ -147,10 +191,22 @@ export default function AdminBannersTab() {
               <span className={`text-[10px] uppercase tracking-wide px-2 py-0.5 ${banner.active ? 'bg-ink text-paper' : 'bg-hairline text-graphite'}`}>
                 {banner.active ? 'Active' : 'Hidden'}
               </span>
-              <button onClick={() => handleToggle(banner.id)} className="text-sm text-graphite hover:text-ink underline transition-colors">
+              <button 
+                onClick={() => handleToggle(banner.id)} 
+                className="text-sm text-graphite hover:text-ink underline transition-colors"
+              >
                 {banner.active ? 'Hide' : 'Show'}
               </button>
-              <button onClick={() => handleDelete(banner.id)} className="text-sm text-graphite hover:text-accent underline transition-colors">
+              <button 
+                onClick={() => handleEditClick(banner)} 
+                className="text-sm text-graphite hover:text-ink underline transition-colors"
+              >
+                Edit
+              </button>
+              <button 
+                onClick={() => handleDelete(banner.id)} 
+                className="text-sm text-graphite hover:text-accent underline transition-colors"
+              >
                 Delete
               </button>
             </div>

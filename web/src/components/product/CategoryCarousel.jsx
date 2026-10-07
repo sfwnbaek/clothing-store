@@ -46,7 +46,7 @@ export default function CategoryCarousel({ categories }) {
           >
             {cat.imageUrl ? (
               <img
-                src={cat.imageUrl}
+                src={`http://localhost:8080${cat.imageUrl}`}
                 alt={cat.name}
                 className="absolute inset-0 w-full h-full object-cover opacity-70 transition-all duration-700 ease-out group-hover:opacity-90 group-hover:scale-110"
               />

@@ -24,6 +24,9 @@ public class Category {
     @Column(name = "size_type", nullable = false)
     private String sizeType = "APPAREL";
 
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
     // Getters and setters
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
@@ -39,4 +42,7 @@ public class Category {
     
     public String getSizeType() { return sizeType; }
     public void setSizeType(String sizeType) { this.sizeType = sizeType; }
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 }

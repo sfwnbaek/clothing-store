@@ -10,6 +10,7 @@ public class CategoryResponse {
     private String name;
     private String slug;
     private String sizeType;
+    private String imageUrl;
 
     public static CategoryResponse from(Category category) {
         CategoryResponse response = new CategoryResponse();
@@ -17,6 +18,7 @@ public class CategoryResponse {
         response.name = category.getName();
         response.slug = category.getSlug();
         response.sizeType = category.getSizeType();
+        response.imageUrl = category.getImageUrl();
         return response;
     }
 
@@ -31,4 +33,7 @@ public class CategoryResponse {
 
     public String getSizeType() { return sizeType; }
     public void setSizeType(String sizeType) { this.sizeType = sizeType; }
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 }

@@ -52,6 +52,36 @@ public class AdminBannerController {
         return ResponseEntity.ok(promoBannerRepository.save(banner));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<PromoBanner> updateBanner(
+            @PathVariable UUID id,
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(required = false) String headline,
+            @RequestParam(required = false) String linkUrl
+    ) throws IOException {
+        
+        PromoBanner banner = promoBannerRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Banner not found"));
+
+        banner.setHeadline(headline);
+        banner.setLinkUrl(linkUrl);
+
+        // Only upload a new file if one was provided
+        if (file != null && !file.isEmpty()) {
+            Path uploadPath = Paths.get(uploadDir);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+            String extension = getExtension(file.getOriginalFilename());
+            String filename = UUID.randomUUID() + extension;
+            Files.copy(file.getInputStream(), uploadPath.resolve(filename));
+            
+            banner.setImageUrl("/uploads/" + filename);
+        }
+
+        return ResponseEntity.ok(promoBannerRepository.save(banner));
+    }
+
     @PatchMapping("/{id}/toggle")
     public ResponseEntity<PromoBanner> toggleActive(@PathVariable UUID id) {
         return promoBannerRepository.findById(id)
