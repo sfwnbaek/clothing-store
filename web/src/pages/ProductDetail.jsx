@@ -13,8 +13,11 @@ export default function ProductDetail() {
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedVariant, setSelectedVariant] = useState(null);
   const [adding, setAdding] = useState(false);
+  
+  // New States to handle Color & Size separately
+  const [selectedColor, setSelectedColor] = useState(null);
+  const [selectedVariant, setSelectedVariant] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -23,13 +26,23 @@ export default function ProductDetail() {
       .then((data) => {
         setProduct(data);
         if (data.variants && data.variants.length > 0) {
-          const inStock = data.variants.find((v) => v.stockQty > 0);
-          setSelectedVariant(inStock || data.variants[0]);
+          // Find the first variant actually in stock to default to
+          const inStock = data.variants.find((v) => v.stockQty > 0) || data.variants[0];
+          setSelectedVariant(inStock);
+          if (inStock.color) setSelectedColor(inStock.color);
         }
       })
       .catch(() => setProduct(null))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  // When a user clicks a new color, switch to it and auto-select an available size
+  function handleColorSelect(color) {
+    setSelectedColor(color);
+    const variantsInColor = product.variants.filter(v => v.color === color);
+    const inStock = variantsInColor.find(v => v.stockQty > 0) || variantsInColor[0];
+    setSelectedVariant(inStock);
+  }
 
   async function handleAddToCart() {
     if (!user) {
@@ -46,7 +59,7 @@ export default function ProductDetail() {
       await api.post('/cart/items', { variantId: selectedVariant.id, quantity: 1 });
       showToast('Added to cart.');
       
-      // 👉 THIS LINE TELLS THE HEADER TO UPDATE THE CART NUMBER INSTANTLY 👈
+      // Tells the Header to update the cart number instantly
       window.dispatchEvent(new Event('cartUpdated')); 
       
     } catch (err) {
@@ -85,9 +98,20 @@ export default function ProductDetail() {
     ? `http://localhost:8080${product.imageUrls[0]}`
     : null;
 
+  // Extract unique colors for this product (ignoring empty strings/nulls)
+  const availableColors = [...new Set(product.variants?.map(v => v.color).filter(Boolean))];
+  const hasColors = availableColors.length > 0;
+
+  // Only show the sizes that belong to the currently selected color
+  const displayedVariants = hasColors 
+    ? product.variants.filter(v => v.color === selectedColor)
+    : product.variants || [];
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-12 animate-fade-in">
       <div className="grid md:grid-cols-2 gap-16">
+        
+        {/* Product Image */}
         <div className="aspect-square bg-hairline overflow-hidden">
           {image ? (
             <img src={image} alt={product.name} className="w-full h-full object-cover" />
@@ -98,6 +122,7 @@ export default function ProductDetail() {
           )}
         </div>
 
+        {/* Product Details */}
         <div>
           <p className="text-xs uppercase tracking-wide text-graphite mb-2">{product.brand}</p>
           <h1 className="font-display font-black text-4xl uppercase tracking-tight mb-4">
@@ -106,13 +131,38 @@ export default function ProductDetail() {
           <p className="font-semibold text-2xl mb-6">{formatPrice(product.basePrice)}</p>
           <p className="text-graphite mb-8 leading-relaxed">{product.description}</p>
 
-          {product.variants && product.variants.length > 0 && (
+          {/* 1. Color Selection Section */}
+          {hasColors && (
+            <div className="mb-6">
+              <p className="font-display font-bold text-sm uppercase tracking-wide mb-3">
+                Color {selectedColor && <span className="text-graphite font-normal normal-case">— {selectedColor}</span>}
+              </p>
+              <div className="flex gap-2 flex-wrap">
+                {availableColors.map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => handleColorSelect(color)}
+                    className={`px-4 py-2 border text-sm font-medium transition-all
+                      ${selectedColor === color
+                        ? 'border-ink bg-ink text-paper'
+                        : 'border-hairline hover:border-ink'}
+                    `}
+                  >
+                    {color}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 2. Size Selection Section */}
+          {displayedVariants.length > 0 && (
             <div className="mb-8">
               <p className="font-display font-bold text-sm uppercase tracking-wide mb-3">
                 Size {selectedVariant && <span className="text-graphite font-normal normal-case">— {selectedVariant.size}</span>}
               </p>
               <div className="flex gap-2 flex-wrap">
-                {product.variants.map((variant) => (
+                {displayedVariants.map((variant) => (
                   <button
                     key={variant.id}
                     onClick={() => setSelectedVariant(variant)}
@@ -128,18 +178,23 @@ export default function ProductDetail() {
                   </button>
                 ))}
               </div>
+              
+              {/* Dynamic Stock Warnings */}
               {selectedVariant && selectedVariant.stockQty > 0 && selectedVariant.stockQty <= 5 && (
-                <p className="text-xs text-accent mt-2">Only {selectedVariant.stockQty} left</p>
+                <p className="text-xs text-accent mt-2 font-semibold">Only {selectedVariant.stockQty} left in stock!</p>
+              )}
+              {selectedVariant && selectedVariant.stockQty === 0 && (
+                <p className="text-xs text-graphite mt-2">Out of stock</p>
               )}
             </div>
           )}
 
           <button
             onClick={handleAddToCart}
-            disabled={adding || !selectedVariant}
+            disabled={adding || !selectedVariant || selectedVariant.stockQty === 0}
             className="w-full bg-ink text-paper font-display font-bold uppercase tracking-wide py-4 hover:bg-accent transition-colors disabled:opacity-50"
           >
-            {adding ? 'Adding...' : 'Add to Cart'}
+            {adding ? 'Adding...' : (selectedVariant?.stockQty === 0 ? 'Out of Stock' : 'Add to Cart')}
           </button>
         </div>
       </div>
