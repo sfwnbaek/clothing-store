@@ -45,6 +45,27 @@ public ResponseEntity<?> checkout(Authentication auth, @Valid @RequestBody Check
         }
     }
 
+    @PostMapping("/orders/{id}/confirm-payment")
+    public ResponseEntity<?> confirmPayment(Authentication auth, @PathVariable UUID id) {
+        User user = userRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // 1. Find the order
+        com.clothingstore.api.entity.Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found"));
+
+        // 2. Security check: make sure the logged-in user actually owns this order
+        if (!order.getUser().getId().equals(user.getId())) {
+            return ResponseEntity.status(403).body("Access denied");
+        }
+
+        // 3. Update the status!
+        order.setStatus("PROCESSING"); // or "PAID", depending on what you use
+        orderRepository.save(order);
+
+        return ResponseEntity.ok(OrderResponse.from(order));
+    }
+
     @GetMapping("/orders")
     public List<OrderResponse> getMyOrders(Authentication auth) {
         User user = userRepository.findByEmail(auth.getName())

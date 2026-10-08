@@ -45,6 +45,10 @@ export default function ProductDetail() {
     try {
       await api.post('/cart/items', { variantId: selectedVariant.id, quantity: 1 });
       showToast('Added to cart.');
+      
+      // 👉 THIS LINE TELLS THE HEADER TO UPDATE THE CART NUMBER INSTANTLY 👈
+      window.dispatchEvent(new Event('cartUpdated')); 
+      
     } catch (err) {
       showToast('Could not add to cart.', 'error');
     } finally {

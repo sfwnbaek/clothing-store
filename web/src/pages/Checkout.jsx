@@ -7,9 +7,13 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { formatPrice } from '../utils/format';
 
-function CheckoutForm() {
+// 1. Pass the 'order' object into this form so we have its ID
+function CheckoutForm({ order }) {
   const stripe = useStripe();
   const elements = useElements();
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+  
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -20,16 +24,30 @@ function CheckoutForm() {
     setSubmitting(true);
     setError('');
 
-    const { error: confirmError } = await stripe.confirmPayment({
+    // 2. Prevent the automatic Stripe redirect so we can handle success manually
+    const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
       elements,
-      confirmParams: {
-        return_url: `${window.location.origin}/orders`,
-      },
+      redirect: 'if_required', 
     });
 
     if (confirmError) {
       setError(confirmError.message);
       setSubmitting(false);
+    } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+      
+      // 3. Payment worked! Tell our Spring Boot backend to change status from PENDING to PROCESSING
+      try {
+        await api.post(`/orders/${order.id}/confirm-payment`);
+        
+        // Let the Header know the cart is now empty
+        window.dispatchEvent(new Event('cartUpdated')); 
+        
+        showToast('Payment successful!');
+        navigate('/orders'); // Redirect the user to their orders page
+      } catch (err) {
+        setError('Payment succeeded, but failed to update order status.');
+        setSubmitting(false);
+      }
     }
   }
 
@@ -155,7 +173,8 @@ export default function Checkout() {
         </div>
 
         <Elements stripe={stripePromise} options={{ clientSecret }}>
-          <CheckoutForm />
+          {/* 4. Pass the order down into the form */}
+          <CheckoutForm order={order} /> 
         </Elements>
       </div>
     );
@@ -217,7 +236,7 @@ export default function Checkout() {
           <>
             <input
               type="text" placeholder="Address Line 1" required
-              value={address.addressLine1}
+              value={address.addressLine1}  
               onChange={(e) => updateField('addressLine1', e.target.value)}
               className={inputClass}
             />
